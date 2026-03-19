@@ -1,6 +1,18 @@
 # Proyecto Final de Desarrollo en la Nube: SwitchFile
 
 
+## Integrantes
+Sara Aranda Gutiérrez 
+Lilia Alejandra Padilla Hernández 
+Luis Alberto González Escamilla 
+
+---
+
+## Profesora
+Marcela Alejandra Rosales Jiménez
+
+---
+
 ## Problema
 
 En el manejo cotidiano de archivos digitales, es común la necesidad de convertir documentos, imágenes o archivos multimedia a distintos formatos. Aunque existen herramientas locales para este propósito, estas presentan limitaciones importantes, como la dependencia del sistema operativo, la falta de escalabilidad para procesar grandes volúmenes de archivos de forma simultánea y la ausencia de funcionalidades de gestión, como el acceso al historial de conversiones desde múltiples dispositivos. 
