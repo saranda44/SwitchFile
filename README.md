@@ -2,9 +2,9 @@
 
 
 ## Integrantes
-Sara Aranda Gutiérrez 
-Lilia Alejandra Padilla Hernández 
-Luis Alberto González Escamilla 
+* Sara Aranda Gutiérrez 
+* Lilia Alejandra Padilla Hernández 
+* Luis Alberto González Escamilla 
 
 ---
 
