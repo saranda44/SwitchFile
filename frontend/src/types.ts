@@ -1,0 +1,1 @@
+// archivo con todas las interfaces (User, File, Conversion, etc).
