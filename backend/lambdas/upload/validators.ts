@@ -1,6 +1,6 @@
 import type { ValidationResult, ExtractedFile } from './types';
 import type { FileCategory } from '../../shared/types';
-import { ALLOWED_MIME_TYPES, FILE_SIZE_LIMITS, ZIP_SIZE_LIMIT } from '../../shared/constants';
+import { ALLOWED_MIME_TYPES, FILE_SIZE_LIMITS, ZIP_SIZE_LIMIT, CONVERSION_MATRIX } from '../../shared/constants';
 import { fileTypeFromBuffer } from 'file-type';
 
 /**
@@ -155,4 +155,27 @@ export async function validateMimeTypeByMagicBytes(
       error: `Error al validar magic bytes: ${error}`,
     };
   }
+}
+
+/**
+ * Valida si una conversión es soportada
+ */
+export function isSupportedConversion(sourceFormat: string, targetFormat: string): boolean {
+  const source = sourceFormat.toLowerCase();
+  const target = targetFormat.toLowerCase();
+
+  // No se puede convertir al mismo formato
+  if (source === target) {
+    return false;
+  }
+
+  const supportedTargets = CONVERSION_MATRIX[source];
+  return supportedTargets ? supportedTargets.includes(target) : false;
+}
+
+/**
+ * Obtiene todas las conversiones posibles para un formato
+ */
+export function getSupportedConversions(sourceFormat: string): string[] {
+  return CONVERSION_MATRIX[sourceFormat.toLowerCase()] || [];
 }

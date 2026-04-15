@@ -10,10 +10,11 @@ import {
   validateMimeTypeByMagicBytes,
   isZipFile,
   validateExtractedFile,
+  isSupportedConversion
 } from './validators';
 import { extractFilesFromZip, validateZipNotEmpty } from './zip';
 import { uploadOriginalFile } from './s3';
-import { registerFile } from './dynamodb';
+import { registerFile, registerConversion } from '../../shared/dynamodb';
 import { enqueueConversion, enqueueBatch } from './sqs';
 import type { UploadResponse, ProcessingResult } from './types';
 import type { ExtractedFile } from './types';
@@ -26,7 +27,8 @@ async function processSimpleFile(
   fileName: string,
   fileSize: number,
   mimeType: string,
-  fileBuffer: Buffer
+  fileBuffer: Buffer,
+  targetFormat: string
 ): Promise<ProcessingResult> {
   // Validar MIME type por magic bytes
   const magicBytesValidation = await validateMimeTypeByMagicBytes(fileBuffer, mimeType);
@@ -41,7 +43,7 @@ async function processSimpleFile(
   // Usar MIME type detectado si es diferente
   const actualMimeType = magicBytesValidation.actualMimeType || mimeType;
 
-  // Validar archivo
+  // Validar archivo (formato y tamaño)
   const validation = validateFile(fileName, fileSize, actualMimeType);
   if (!validation.isValid) {
     return {
@@ -51,14 +53,33 @@ async function processSimpleFile(
     };
   }
 
+  // Validar que la conversión sea soportada
+  if (!isSupportedConversion(validation.format!, targetFormat)) {
+    return {
+      success: false,
+      message: 'Conversión no soportada',
+      error: `No se puede convertir de ${validation.format} a ${targetFormat}`,
+    };
+  }
+
   // Sanitizar nombre
   const sanitizedFileName = sanitizeFileName(fileName);
 
   try {
-    // Generar fileId para construir la s3Key antes de registrar en DynamoDB
     const fileId = uuidv4();
 
-    // Subir a S3 primero para obtener la s3Key real
+    // Registrar archivo original en DynamoDB (tabla Files)
+    await registerFile(
+      userId,
+      sanitizedFileName,
+      validation.format!,
+      fileSize,
+      '', // s3Key temporal, se actualiza después de subir
+      'original',
+      fileId
+    );
+
+    // Subir archivo original a S3
     const s3Key = await uploadOriginalFile(
       userId,
       fileId,
@@ -67,23 +88,20 @@ async function processSimpleFile(
       validation.format!
     );
 
-    // Registrar archivo en DynamoDB con la s3Key correcta
-    await registerFile(
-      userId,
-      sanitizedFileName,
-      validation.format!,
-      fileSize,
-      s3Key,
-      'original',
-      fileId
-    );
-
-    // Encolar conversión
-    const conversionId = await enqueueConversion(
+    // Registrar conversión en DynamoDB (tabla Conversions) con estado "pending"
+    const conversionId = await registerConversion(
       userId,
       fileId,
       validation.format!,
-      validation.format!, // Mismo formato inicialmente
+      targetFormat
+    );
+
+    // Encolar en SQS
+    await enqueueConversion(
+      userId,
+      fileId,
+      validation.format!,
+      targetFormat,
       s3Key
     );
 
@@ -108,7 +126,8 @@ async function processSimpleFile(
 async function processZipFile(
   userId: string,
   fileSize: number,
-  fileBuffer: Buffer
+  fileBuffer: Buffer,
+  targetFormat: string
 ): Promise<ProcessingResult> {
   // Validar tamaño del ZIP
   const zipValidation = validateZipFile(fileSize);
@@ -122,7 +141,7 @@ async function processZipFile(
 
   try {
     // Descomprimir ZIP
-    let extractedFiles = await extractFilesFromZip(fileBuffer);
+    const extractedFiles = await extractFilesFromZip(fileBuffer);
 
     // Validar que no esté vacío
     if (!validateZipNotEmpty(extractedFiles)) {
@@ -153,7 +172,7 @@ async function processZipFile(
       // Usar MIME type detectado
       file.mimeType = magicBytesValidation.actualMimeType || file.mimeType;
 
-      // Validar archivo
+      // Validar archivo (formato y tamaño)
       const validation = validateExtractedFile(file);
       if (!validation.isValid) {
         console.warn(`Archivo ${file.fileName} rechazado: ${validation.error}`);
@@ -182,12 +201,30 @@ async function processZipFile(
     }> = [];
 
     for (const file of validFiles) {
-      const sanitizedFileName = sanitizeFileName(file.fileName);
+      // Validar que la conversión sea soportada
+      if (!isSupportedConversion(file.format, targetFormat)) {
+        console.warn(
+          `Archivo ${file.fileName} rechazado: conversión ${file.format} → ${targetFormat} no soportada`
+        );
+        continue;
+      }
 
-      // Generar fileId para subir a S3 y registrar con la misma clave
+      const sanitizedFileName = sanitizeFileName(file.fileName);
       const fileId = uuidv4();
 
-      // Subir a S3 primero para obtener la s3Key real
+      // Registrar archivo original en DynamoDB con batchId
+      await registerFile(
+        userId,
+        sanitizedFileName,
+        file.format,
+        file.fileSize,
+        '', // s3Key temporal
+        'original',
+        fileId,
+        batchId
+      );
+
+      // Subir archivo original a S3
       const s3Key = await uploadOriginalFile(
         userId,
         fileId,
@@ -196,33 +233,40 @@ async function processZipFile(
         file.format
       );
 
-      // Registrar archivo en DynamoDB con la s3Key correcta
-      await registerFile(
+      // Registrar conversión en DynamoDB con batchId y estado "pending"
+      await registerConversion(
         userId,
-        sanitizedFileName,
+        fileId,
         file.format,
-        file.fileSize,
-        s3Key,
-        'original',
-        fileId
+        targetFormat,
+        batchId
       );
 
+      // Agregar a lista para encolar
       filesToEnqueue.push({
         sourceFileId: fileId,
         sourceFormat: file.format,
-        targetFormat: file.format,
+        targetFormat,
         s3Key,
       });
     }
 
-    // Encolar batch
+    if (filesToEnqueue.length === 0) {
+      return {
+        success: false,
+        message: 'Ningún archivo del ZIP soporta la conversión solicitada',
+        error: `No se puede convertir ningún archivo a ${targetFormat}`,
+      };
+    }
+
+    // Encolar todos los mensajes en SQS
     await enqueueBatch(userId, filesToEnqueue, batchId);
 
     return {
       success: true,
       batchId,
-      message: `${validFiles.length} archivos cargados y encolados`,
-      filesProcessed: validFiles.length,
+      message: `${filesToEnqueue.length} archivos cargados y encolados`,
+      filesProcessed: filesToEnqueue.length,
     };
   } catch (error) {
     return {
@@ -240,7 +284,7 @@ export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
-    // Extraer userId del contexto (viene del authorizer de API Gateway)
+    // Extraer userId del token (authorizer de API Gateway)
     const userId = event.requestContext.authorizer?.claims?.sub;
     if (!userId) {
       return {
@@ -253,16 +297,16 @@ export const handler = async (
       };
     }
 
-    // Parsear body (multipart form data)
-    // Nota: En producción necesitarás un parser de multipart
+    // Parsear body
     const body = JSON.parse(event.body || '{}');
     const fileName = body.fileName as string;
     const fileSize = body.fileSize as number;
     const mimeType = body.mimeType as string;
-    const fileBase64 = body.file as string; // Base64 encoded
+    const fileBase64 = body.fileBase64 as string;
+    const targetFormat = body.targetFormat as string;
 
     // Validar campos requeridos
-    if (!fileName || !fileSize || !mimeType || !fileBase64) {
+    if (!fileName || !fileSize || !mimeType || !fileBase64 || !targetFormat) {
       return {
         statusCode: 400,
         body: JSON.stringify({
@@ -272,19 +316,18 @@ export const handler = async (
       };
     }
 
-    // Decodificar archivo de Base64
+    // Decodificar archivo de Base64 a Buffer
     const fileBuffer = Buffer.from(fileBase64, 'base64');
 
-    // Procesar según tipo
+    // Detectar si es ZIP o archivo simple y procesar
     let result: ProcessingResult;
 
     if (isZipFile(mimeType)) {
-      result = await processZipFile(userId, fileSize, fileBuffer);
+      result = await processZipFile(userId, fileSize, fileBuffer, targetFormat);
     } else {
-      result = await processSimpleFile(userId, fileName, fileSize, mimeType, fileBuffer);
+      result = await processSimpleFile(userId, fileName, fileSize, mimeType, fileBuffer, targetFormat);
     }
 
-    // Retornar respuesta
     return {
       statusCode: result.success ? 200 : 400,
       body: JSON.stringify({

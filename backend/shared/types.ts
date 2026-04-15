@@ -19,6 +19,7 @@ export interface FileRecord {
   fileSize: number;
   s3Key: string;
   type: 'original' | 'converted';
+  batchId?: string; // para agrupar conversiones en lote
   createdAt: string;
 }
 
@@ -32,6 +33,7 @@ export interface ConversionRecord {
   targetFormat: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   errorMessage?: string;
+  batchId?: string; // para agrupar conversiones en lote
   createdAt: string;
 }
 

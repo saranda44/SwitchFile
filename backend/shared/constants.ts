@@ -27,6 +27,41 @@ export const ALLOWED_MIME_TYPES: Record<string, { extensions: string[]; category
   'text/html': { extensions: ['html'], category: 'documents' },
 };
 
+/**
+ * Matriz de conversiones soportadas
+ * Key: sourceFormat, Value: array de targetFormats soportados
+ */
+export const CONVERSION_MATRIX: Record<string, string[]> = {
+  // Imágenes
+  png: ['jpg', 'jpeg', 'webp', 'gif', 'tiff'],
+  jpg: ['png', 'webp', 'gif', 'tiff'],
+  jpeg: ['png', 'webp', 'gif', 'tiff'],
+  webp: ['png', 'jpg', 'jpeg', 'gif', 'tiff'],
+  gif: ['png', 'jpg', 'jpeg', 'webp', 'tiff'],
+  tiff: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+  svg: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'tiff'],
+  // Audio
+  mp3: ['wav', 'flac', 'aac', 'ogg'],
+  wav: ['mp3', 'flac', 'aac', 'ogg'],
+  flac: ['mp3', 'wav', 'aac', 'ogg'],
+  aac: ['mp3', 'wav', 'flac', 'ogg'],
+  ogg: ['mp3', 'wav', 'flac', 'aac'],
+  // Video
+  mp4: ['mov', 'avi', 'webm', 'mkv'],
+  mov: ['mp4', 'avi', 'webm', 'mkv'],
+  avi: ['mp4', 'mov', 'webm', 'mkv'],
+  webm: ['mp4', 'mov', 'avi', 'mkv'],
+  mkv: ['mp4', 'mov', 'avi', 'webm'],
+  // Documentos
+  pdf: ['txt', 'html'],
+  docx: ['pdf', 'txt', 'html'],
+  xlsx: ['pdf', 'csv', 'html'],
+  pptx: ['pdf'],
+  txt: ['pdf', 'docx', 'html'],
+  csv: ['pdf', 'xlsx', 'html'],
+  html: ['pdf', 'txt'],
+};
+
 // Límites de tamaño en bytes (derivados de las categorías)
 export const FILE_SIZE_LIMITS: Record<FileCategory, number> = {
   images: 50 * 1024 * 1024, // 50 MB
