@@ -67,18 +67,6 @@ async function processSimpleFile(
 
   try {
     const fileId = uuidv4();
-
-    // Registrar archivo original en DynamoDB (tabla Files)
-    await registerFile(
-      userId,
-      sanitizedFileName,
-      validation.format!,
-      fileSize,
-      '', // s3Key temporal, se actualiza después de subir
-      'original',
-      fileId
-    );
-
     // Subir archivo original a S3
     const s3Key = await uploadOriginalFile(
       userId,
@@ -87,6 +75,19 @@ async function processSimpleFile(
       fileBuffer,
       validation.format!
     );
+
+    // Registrar archivo original en DynamoDB (tabla Files)
+    await registerFile(
+      userId,
+      sanitizedFileName,
+      validation.format!,
+      fileSize,
+      s3Key, // s3Key se registra desde el inicio para facilitar consultas posteriores
+      'original',
+      fileId
+    );
+
+    
 
     // Registrar conversión en DynamoDB (tabla Conversions) con estado "pending"
     const conversionId = await registerConversion(
@@ -166,7 +167,7 @@ async function processZipFile(
         console.warn(
           `Archivo ${file.fileName} rechazado: ${magicBytesValidation.error}`
         );
-        continue;
+        continue; // Rechaza archivos no válidos pero sigue procesando el resto del ZIP
       }
 
       // Usar MIME type detectado
@@ -176,7 +177,7 @@ async function processZipFile(
       const validation = validateExtractedFile(file);
       if (!validation.isValid) {
         console.warn(`Archivo ${file.fileName} rechazado: ${validation.error}`);
-        continue;
+        continue; // Rechaza archivos no válidos pero sigue procesando el resto del ZIP
       }
 
       file.category = validation.category!;
@@ -206,23 +207,11 @@ async function processZipFile(
         console.warn(
           `Archivo ${file.fileName} rechazado: conversión ${file.format} → ${targetFormat} no soportada`
         );
-        continue;
+        continue; // Rechaza archivos que no se pueden convertir pero sigue procesando el resto del ZIP
       }
 
       const sanitizedFileName = sanitizeFileName(file.fileName);
       const fileId = uuidv4();
-
-      // Registrar archivo original en DynamoDB con batchId
-      await registerFile(
-        userId,
-        sanitizedFileName,
-        file.format,
-        file.fileSize,
-        '', // s3Key temporal
-        'original',
-        fileId,
-        batchId
-      );
 
       // Subir archivo original a S3
       const s3Key = await uploadOriginalFile(
@@ -232,6 +221,20 @@ async function processZipFile(
         file.fileBuffer,
         file.format
       );
+
+      // Registrar archivo original en DynamoDB con batchId
+      await registerFile(
+        userId,
+        sanitizedFileName,
+        file.format,
+        file.fileSize,
+        s3Key, // s3Key se registra desde el inicio para facilitar consultas posteriores
+        'original',
+        fileId,
+        batchId
+      );
+
+      
 
       // Registrar conversión en DynamoDB con batchId y estado "pending"
       await registerConversion(
