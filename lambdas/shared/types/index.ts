@@ -34,8 +34,6 @@ export {
 
 export type {
   StepFunctionEvent,
-  ValidationStepResult,
-  UploadStepResult,
   RegisterStepResult,
   EnqueueStepResult,
   SQSConversionMessage,

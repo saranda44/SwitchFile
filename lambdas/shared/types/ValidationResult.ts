@@ -24,9 +24,10 @@ export interface ValidationError {
  */
 export interface ValidatedFile {
   fileName: string; // Nombre original del archivo
-  format: string; // Extensión/formato (mp4, pdf, png, etc.)
+  fileFormat: string; // Extensión/formato (mp4, pdf, png, etc.)
+  fileBuffer: Buffer; // Contenido del archivo en memoria (para subir a S3)
   fileSize: number; // Tamaño en bytes
-  targetFormat: string; // Formato destino solicitado
+  targetFormat: string; // Solo se permite un formato destino
   isBatch: boolean; // Si es parte de un lote
 }
 

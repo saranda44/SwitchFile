@@ -43,14 +43,14 @@ export function getFormatCategory(format: string): FileCategory | null {
  * Indica qué formatos pueden convertirse a cuáles
  */
 export const SUPPORTED_CONVERSIONS: Record<string, string[]> = {
-  // Imágenes
-  png: ['jpg', 'jpeg', 'webp', 'gif', 'svg', 'tiff'],
-  jpg: ['png', 'webp', 'gif', 'svg', 'tiff'],
-  jpeg: ['png', 'webp', 'gif', 'svg', 'tiff'],
-  webp: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'tiff'],
-  gif: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'tiff'],
+  // Imágenes (SVG no es formato destino válido: raster → vector no soportado)
+  png: ['jpg', 'jpeg', 'webp', 'gif', 'tiff'],
+  jpg: ['png', 'webp', 'gif', 'tiff'],
+  jpeg: ['png', 'webp', 'gif', 'tiff'],
+  webp: ['png', 'jpg', 'jpeg', 'gif', 'tiff'],
+  gif: ['png', 'jpg', 'jpeg', 'webp', 'tiff'],
   svg: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'tiff'],
-  tiff: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'],
+  tiff: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
   
   // Audio
   mp3: ['wav', 'flac', 'aac', 'ogg'],

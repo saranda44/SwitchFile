@@ -1,95 +1,91 @@
 /**
  * Interfaz StepFunctionEvent - Evento base que fluye a través del Step Function
+ *
+ * El handler /upload sube a S3 antes de iniciar el Step Function,
+ * por lo que el evento ya trae s3Key.
+ * El Step Function solo ejecuta: Register DB → Enqueue SQS.
  */
 export interface StepFunctionEvent {
-  // Información del usuario
-  userId: string;
-  
-  // Información del archivo
-  fileName: string;
-  fileSize: number;
-  fileFormat: string;
-  isBatch: boolean;
-  
-  // Formato destino
-  targetFormat: string;
-  
-  // Datos que se van agregando en cada paso
-  validationResult?: ValidationStepResult;
-  uploadResult?: UploadStepResult;
-  registerResult?: RegisterStepResult;
-  enqueueResult?: EnqueueStepResult;
-  
-  // ID único para rastrear el flujo
-  executionId?: string;
+    // Información del usuario
+    userId: string;
+    
+
+    // Archivo simple
+    fileName?: string;
+    fileSize?: number;
+    s3Key?: string;      // Ruta en S3 del archivo ya subido
+    fileFormat?: string;
+
+    // Formato destino (único)
+    targetFormat: string;
+
+    // Batch (ZIP)
+    isBatch: boolean;
+    batchId?: string;
+    files?: Array<{
+        fileName: string;
+        fileFormat: string;
+        s3Key: string;     // Ruta en S3 de cada archivo del lote
+        fileSize: number;
+        targetFormat: string;
+    }>;
+
+    // Resultados que agregan las lambdas del Step Function
+    registerResult?: RegisterStepResult;
+    enqueueResult?: EnqueueStepResult;
+
+    // ID único para rastrear el flujo
+    executionId?: string;
 }
 
 /**
- * Resultado del paso 1: Validate
- */
-export interface ValidationStepResult {
-  isValid: boolean;
-  isBatch: boolean;
-  fileCount: number;
-  errors?: string[];
-}
-
-/**
- * Resultado del paso 2: Upload S3
- */
-export interface UploadStepResult {
-  s3Key: string;
-  s3Keys?: string[]; // Si es batch
-}
-
-/**
- * Resultado del paso 3: Register DB
+ * Resultado del paso: Register DB
  */
 export interface RegisterStepResult {
-  fileId: string;
-  fileIds?: string[]; // Si es batch
-  conversionId: string;
-  conversionIds?: string[]; // Si es batch
+    fileId: string;
+    fileIds?: string[]; // Si es batch
+    conversionId: string;
+    conversionIds?: string[]; // Si es batch
 }
 
 /**
  * Resultado del paso 4: Enqueue SQS
  */
 export interface EnqueueStepResult {
-  messageId: string;
-  messageIds?: string[]; // Si es batch
+    messageId: string;
+    messageIds?: string[]; // Si es batch
 }
 
 /**
- * Payload enviado a SQS por la Lambda 4-enqueueSQS
+ * Payload enviado a SQS por la Lambda Enqueue SQS
  */
 export interface SQSConversionMessage {
-  userId: string;
-  fileId: string;
-  s3Key: string;
-  sourceFormat: string;
-  targetFormat: string;
-  conversionId: string;
-  isBatch: boolean;
-  batchId?: string;
+    userId: string;
+    fileId: string;
+    s3Key: string;
+    sourceFormat: string;
+    targetFormat: string;
+    conversionId: string;
+    isBatch: boolean;
+    batchId?: string;
 }
 
 /**
  * DTO para la respuesta final del Step Function
  */
 export interface StepFunctionResult {
-  success: boolean;
-  executionId?: string;
-  message?: string;
-  data?: {
-    conversionId: string;
-    conversionIds?: string[];
-    messageId: string;
-    messageIds?: string[];
-  };
-  error?: {
-    code: string;
-    message: string;
-    step: string; // Nombre del paso que falló
-  };
+    success: boolean;
+    executionId?: string;
+    message?: string;
+    data?: {
+        conversionId: string;
+        conversionIds?: string[];
+        messageId: string;
+        messageIds?: string[];
+    };
+    error?: {
+        code: string;
+        message: string;
+        step: string; // Nombre del paso que falló
+    };
 }
