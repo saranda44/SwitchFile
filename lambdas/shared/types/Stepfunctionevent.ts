@@ -63,7 +63,7 @@ export interface RegisterStepResult {
  * Resultado del paso 4: Enqueue SQS
  */
 export interface EnqueueStepResult {
-    messageId: string;
+    messageId?: string;
     messageIds?: string[]; // Si es batch
 }
 
@@ -73,6 +73,7 @@ export interface EnqueueStepResult {
 export interface SQSConversionMessage {
     userId: string;
     fileId: string;
+    fileName: string;
     s3Key: string;
     sourceFormat: string;
     targetFormat: string;
