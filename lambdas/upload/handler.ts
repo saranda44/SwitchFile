@@ -7,13 +7,12 @@
  * 3. Validar que targetFormat sea exactamente uno
  * 4. Detectar si el archivo es ZIP (batch) o simple
  * 5. Validar tamaño (ZIP → límite del ZIP; simple → límite por categoría)
- * 6. Validar extensión, magic bytes, nombre sanitizado y conversión soportada
+ * 6. Validar extensión, nombre sanitizado y conversión soportada
  *    (ZIP: validar cada archivo; si alguno falla → rechazar todo)
  * 7. Subir archivo(s) a S3
  * 8. Iniciar Step Function con s3Key(s)
  */
 
-import { parse } from 'lambda-multipart-parser';
 import JSZip from 'jszip';
 import { StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -25,11 +24,10 @@ import {
 } from '../shared/types/Apigatewayevent';
 import { StepFunctionEvent } from '../shared/types/Stepfunctionevent';
 import { AWS_RESOURCES, generateS3UploadKey } from '../shared/constants/awsResourceNames';
-import { extractUserIdFromEvent } from '../shared/utils/helpers';
+import { extractUserIdFromEvent, parseMultipart } from '../shared/utils/helpers';
 import {
   validateFileSize,
   sanitizeFileName,
-  validateMagicBytes,
   validateFileExtension,
   validateConversionSupported,
   isZipFile,
@@ -47,13 +45,14 @@ import getS3Client from '../shared/connections/s3Client';
  * Sube un archivo a S3 y devuelve el s3Key resultante.
  * Ruta: uploads/{userId}/{fileId}/original.{ext}
  */
-async function uploadToS3(
+async function uploadOriginalToS3(
   userId: string,
   fileId: string,
   fileBuffer: Buffer,
   fileFormat: string,
+  fileName?: string,
 ): Promise<string> {
-  const s3Key = generateS3UploadKey(userId, fileId, `original.${fileFormat}`);
+  const s3Key = generateS3UploadKey(userId, fileId, fileName || `original.${fileFormat}`);
   const contentType = mime.lookup(fileFormat) || 'application/octet-stream';
 
   await getS3Client().send(
@@ -97,13 +96,7 @@ async function validateSingleFile(
     return { isValid: false, error: `Tamaño inválido: ${sizeValidation.error}` };
   }
 
-  // 4. Validar magic bytes
-  const magicValidation = await validateMagicBytes(fileBuffer, sourceFormat);
-  if (!magicValidation.isValid) {
-    return { isValid: false, error: `Tipo de archivo inválido: ${magicValidation.error}` };
-  }
-
-  // 5. Validar que la conversión sourceFormat -> targetFormat está soportada
+  // 4. Validar que la conversión sourceFormat -> targetFormat está soportada
   const conversionValidation = validateConversionSupported(sourceFormat, targetFormat);
   if (!conversionValidation.isValid) {
     return {
@@ -187,15 +180,9 @@ export async function handler(event: APIGatewayEvent) {
     console.log(`[Upload] userId=${userId}`);
 
     // 2. Parsear multipart/form-data
-    let parsed: any;
+    let parsed: Awaited<ReturnType<typeof parseMultipart>>;
     try {
-      const eventToParse = {
-        ...event,
-        body: event.isBase64Encoded
-          ? Buffer.from(event.body!, 'base64').toString('binary')
-          : event.body,
-      };
-      parsed = await parse(eventToParse as any);
+      parsed = await parseMultipart(event);
     } catch (error) {
       console.error('[Upload] Error al parsear multipart:', error);
       return createErrorResponse(400, 'BAD_REQUEST', 'Error al procesar el formulario multipart');
@@ -208,7 +195,7 @@ export async function handler(event: APIGatewayEvent) {
 
     const uploadedFile = parsed.files[0];
     const fileBuffer = uploadedFile.content as Buffer;
-    const fileName = uploadedFile.filename as string;
+    const fileName = uploadedFile.filename as string; 
 
     // 4. Validar targetFormat — solo se permite exactamente uno
     let targetFormat: string;
@@ -272,7 +259,8 @@ export async function handler(event: APIGatewayEvent) {
 
       for (const file of validatedFiles) {
         const fileId = generateNewId();
-        const s3Key = await uploadToS3(userId, fileId, file.fileBuffer, file.fileFormat);
+        const fileNameForS3 = `${file.fileName}`; // Mantener el nombre original del archivo dentro del ZIP
+        const s3Key = await uploadOriginalToS3(userId, fileId, file.fileBuffer, file.fileFormat, fileNameForS3);
         console.log(`[Upload] Subido a S3: ${s3Key}`);
 
         uploadedFiles!.push({
@@ -328,7 +316,7 @@ export async function handler(event: APIGatewayEvent) {
 
     // Subir a S3
     const fileId = generateNewId();
-    const s3Key = await uploadToS3(userId, fileId, validatedFile.fileBuffer, validatedFile.fileFormat);
+    const s3Key = await uploadOriginalToS3(userId, fileId, validatedFile.fileBuffer, validatedFile.fileFormat, validatedFile.fileName);
     console.log(`[Upload] Subido a S3: ${s3Key}`);
 
     // Iniciar Step Function

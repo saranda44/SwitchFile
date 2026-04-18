@@ -1,35 +1,32 @@
 /**
- * Interfaz APIGatewayEvent - Evento de API Gateway con autenticación de Cognito
+ * Evento de HTTP API Gateway v2 con JWT authorizer (Cognito)
  */
 export interface APIGatewayEvent {
-  // Información de la solicitud
-  httpMethod: string; // GET, POST, PUT, DELETE, etc.
-  path: string; // Ruta del endpoint (/upload, /vault/{id}, etc.)
-  headers: Record<string, string>; // Headers HTTP
-  
-  // Autenticación Cognito
+  routeKey: string;
+  rawPath: string;
+  headers: Record<string, string>;
   requestContext: {
+    http: {
+      method: string;
+      path: string;
+      sourceIp: string;
+    };
     authorizer: {
-      claims: {
-        sub: string; // userId (REQUERIDO)
-        email?: string;
-        [key: string]: any;
+      jwt: {
+        claims: {
+          sub: string;
+          email?: string;
+          [key: string]: any;
+        };
       };
     };
+    requestId: string;
+    stage: string;
   };
-  
-  // Parámetros
-  pathParameters?: Record<string, string> | null; // {id, fileId, etc.}
-  queryStringParameters?: Record<string, string> | null; // Query params
-  
-  // Body de la solicitud
-  body?: string | null; // JSON stringificado
+  pathParameters?: Record<string, string> | null;
+  queryStringParameters?: Record<string, string> | null;
+  body?: string | null;
   isBase64Encoded?: boolean;
-  
-  // Información adicional
-  requestId?: string;
-  stage?: string;
-  sourceIp?: string;
 }
 
 /**

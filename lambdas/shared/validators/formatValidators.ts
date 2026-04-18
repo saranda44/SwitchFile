@@ -249,15 +249,7 @@ export async function validateFileComplete(
     }
   }
 
-  // 4. Validar magic bytes usando file-type
-  if (format && fileBuffer && fileBuffer.length > 0) {
-    const magicValidation = await validateMagicBytes(fileBuffer, format);
-    if (!magicValidation.isValid) {
-      errors.push(magicValidation.error || 'Tipo de archivo no válido');
-    }
-  }
-
-  // 5. Validar conversión
+  // 4. Validar conversión
   if (format && targetFormat) {
     const conversionValidation = validateConversionSupported(format, targetFormat);
     if (!conversionValidation.isValid) {

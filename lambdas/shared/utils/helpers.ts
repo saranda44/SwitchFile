@@ -3,8 +3,63 @@
  * Funciones auxiliares generales del proyecto
  */
 
-import { v4 as uuidv4 } from 'uuid';
+
+import Busboy from 'busboy';
 import { APIGatewayEvent, ParsedBody } from '../types/Apigatewayevent';
+
+export interface ParsedFile {
+  fieldname: string;
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  encoding: string;
+}
+
+export interface ParsedMultipart {
+  files: ParsedFile[];
+  [key: string]: unknown;
+}
+
+export function parseMultipart(event: APIGatewayEvent): Promise<ParsedMultipart> {
+  return new Promise((resolve, reject) => {
+    const result: ParsedMultipart = { files: [] };
+
+    const bb = Busboy({
+      headers: {
+        'content-type': (event.headers['content-type'] ?? event.headers['Content-Type']) as string,
+      },
+    });
+
+    bb.on('file', (fieldname, stream, info) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('close', () => {
+        (result.files as ParsedFile[]).push({
+          fieldname,
+          filename: info.filename,
+          content: Buffer.concat(chunks),
+          contentType: info.mimeType,
+          encoding: info.encoding,
+        });
+      });
+    });
+
+    bb.on('field', (name, value) => {
+      result[name] = value;
+    });
+
+    bb.on('close', () => resolve(result));
+    bb.on('error', reject);
+
+    // Escribir el body como Buffer para evitar corrupción de bytes binarios > 0x7F
+    const body = event.isBase64Encoded
+      ? Buffer.from(event.body!, 'base64')
+      : Buffer.from(event.body!, 'binary');
+
+    bb.write(body);
+    bb.end();
+  });
+}
 
 /**
  * Extraer userId del evento de API Gateway autenticado con Cognito
@@ -12,7 +67,7 @@ import { APIGatewayEvent, ParsedBody } from '../types/Apigatewayevent';
  */
 export function extractUserIdFromEvent(event: APIGatewayEvent): string | null {
   try {
-    const userId = event?.requestContext?.authorizer?.claims?.sub;
+    const userId = event?.requestContext?.authorizer?.jwt?.claims?.sub;
 
     if (!userId || typeof userId !== 'string') {
       console.error('[extractUserIdFromEvent] userId no encontrado en evento');
