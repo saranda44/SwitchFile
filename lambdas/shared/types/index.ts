@@ -17,7 +17,6 @@ export type {
   ValidationError,
   ValidatedFile,
 } from './ValidationResult';
-export { ValidationErrorCode } from './ValidationResult';
 
 export type {
   APIGatewayEvent,

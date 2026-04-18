@@ -265,6 +265,7 @@ export async function handler(event: APIGatewayEvent) {
 
         uploadedFiles!.push({
           fileName: file.fileName,
+          fileId,
           fileFormat: file.fileFormat,
           s3Key,
           fileSize: file.fileSize,
@@ -324,6 +325,7 @@ export async function handler(event: APIGatewayEvent) {
       userId,
       isBatch: false,
       fileName: validatedFile.fileName,
+      fileId,
       fileSize: validatedFile.fileSize,
       s3Key,
       fileFormat: validatedFile.fileFormat,
@@ -343,6 +345,7 @@ export async function handler(event: APIGatewayEvent) {
       executionId: sfnResponse.executionArn,
       message: 'Conversión iniciada',
       fileName: validatedFile.fileName,
+      fileId: validatedFile.fileId,
     });
   } catch (error) {
     console.error('[Upload] Error no capturado:', error);

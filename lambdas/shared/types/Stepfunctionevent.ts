@@ -12,6 +12,7 @@ export interface StepFunctionEvent {
 
     // Archivo simple
     fileName?: string;
+    fileId?: string;      // ID del archivo en la DB se crea al subir a S3, se agrega en el paso Register DB
     fileSize?: number;
     s3Key?: string;      // Ruta en S3 del archivo ya subido
     fileFormat?: string;
@@ -24,6 +25,7 @@ export interface StepFunctionEvent {
     batchId?: string;
     files?: Array<{
         fileName: string;
+        fileId: string;    // ID del archivo en la DB se crea al subir a S3, se agrega en el paso Register DB
         fileFormat: string;
         s3Key: string;     // Ruta en S3 de cada archivo del lote
         fileSize: number;
