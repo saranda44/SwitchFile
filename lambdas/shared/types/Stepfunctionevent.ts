@@ -41,13 +41,22 @@ export interface StepFunctionEvent {
 }
 
 /**
+ * Par fileId ↔ conversionId para un archivo del lote
+ */
+export interface FileConversionRecord {
+    fileId: string;
+    conversionId: string;
+}
+
+/**
  * Resultado del paso: Register DB
+ * - Simple: fileId + conversionId directamente
+ * - Batch: records[] con la asociación fileId ↔ conversionId de cada archivo
  */
 export interface RegisterStepResult {
-    fileId: string;
-    fileIds?: string[]; // Si es batch
-    conversionId: string;
-    conversionIds?: string[]; // Si es batch
+    fileId?: string;
+    conversionId?: string;
+    records?: FileConversionRecord[];
 }
 
 /**
