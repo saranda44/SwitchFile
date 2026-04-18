@@ -3,7 +3,10 @@
  * Valida el formato y estructura de IDs del sistema
  */
 
-import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
+import { randomUUID } from 'crypto';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuidValidate = (id: string) => UUID_REGEX.test(id);
 
 /**
  * Validar userId desde Cognito
@@ -83,5 +86,5 @@ export function validateBatchId(batchId: string | undefined): {
  * Generar nuevo UUID v4 para fileId, conversionId, batchId
  */
 export function generateNewId(): string {
-  return uuidv4();
+  return randomUUID();
 }

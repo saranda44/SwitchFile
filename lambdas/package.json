@@ -27,15 +27,13 @@
     "file-type": "^16.5.4",
     "jszip": "^3.10.1",
     "lambda-multipart-parser": "^1.0.1",
-    "mime-types": "^3.0.2",
-    "uuid": "^13.0.0"
+    "mime-types": "^3.0.2"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.161",
     "@types/jest": "^30.0.0",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^25.6.0",
-    "@types/uuid": "^10.0.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.3"
