@@ -23,7 +23,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1031.0",
     "@aws-sdk/s3-request-presigner": "^3.1031.0",
     "dotenv": "^17.4.2",
-    "file-type": "^22.0.1",
+    "file-type": "^16.5.4",
     "jszip": "^3.10.1",
     "mime-types": "^3.0.2",
     "uuid": "^13.0.0"
