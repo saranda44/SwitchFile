@@ -1,5 +1,5 @@
 export interface Conversion {
-  conversionId: string;
+  conversionId: string; // derived from SK: CONV#timestamp#uuid
   sourceFileId: string;
   sourceFileName?: string;
   sourceFormat: string;
@@ -9,6 +9,8 @@ export interface Conversion {
   isBatch: boolean;
   batchId?: string;
   createdAt: string;
+  PK?: string;
+  SK?: string;
 }
 
 export interface FilePreview {

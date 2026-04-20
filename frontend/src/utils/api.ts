@@ -12,18 +12,23 @@ const getAuthHeaders = async (): Promise<Record<string, string>> => {
 
 // FILES (Dashboard)
 
+const extractConversionId = (sk: string): string => sk.split("#")[2] ?? sk;
+
 const getFiles = async (): Promise<Conversion[]> => {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/files`, { headers });
   const json = await res.json();
-  return json.data.conversions;
+  return (json.files as Conversion[]).map((c) => ({
+    ...c,
+    conversionId: extractConversionId(c.SK ?? ""),
+  }));
 };
 
 const getFileById = async (id: string): Promise<Conversion> => {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/files/${id}`, { headers });
   const json = await res.json();
-  return json.data;
+  return { ...json, conversionId: extractConversionId(json.SK ?? id) };
 };
 
 
