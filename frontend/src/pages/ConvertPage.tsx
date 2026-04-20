@@ -33,7 +33,8 @@ export default function ConvertPage() {
     }
 
     try {
-      await api.convertFile("mock", format);
+      //convert en lugar de reconvert para no depender de un archivo previo
+      await api.reconvertFile("mock", format);
       alert("Conversión iniciada ");
     } catch {
       alert("Modo demo");

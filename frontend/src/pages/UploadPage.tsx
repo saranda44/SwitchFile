@@ -33,10 +33,10 @@ export default function UploadPage() {
     }
 
     try {
-      await api.uploadFile(file);
+      await api.uploadFile(file, format);
       alert("Archivo subido");
     } catch {
-      alert("Modo demo");
+      alert("Error al subir");
     }
   };
 

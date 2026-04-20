@@ -1,14 +1,29 @@
 import { useState } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Button from "../components/Button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+
+  if (user) return <Navigate to="/" replace />;
 
   const handleLogin = async () => {
-    // Conectar con Amplify Auth
-    console.log("Login:", email, password);
-    alert("Login simulado");
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,9 +45,14 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{ width: "100%", marginBottom: 20 }}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         />
 
-        <Button onClick={handleLogin}>Entrar</Button>
+        {error && <p style={{ color: "red", marginBottom: 10 }}>{error}</p>}
+
+        <Button onClick={handleLogin} disabled={loading}>
+          {loading ? "Cargando..." : "Entrar"}
+        </Button>
       </div>
     </div>
   );

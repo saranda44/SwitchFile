@@ -1,10 +1,17 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   return (
     <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
@@ -16,33 +23,24 @@ export default function Navbar() {
           width: "100%",
           display: "flex",
           justifyContent: "center",
+          alignItems: "center",
           zIndex: 1000,
           paddingTop: "10px",
         }}
       >
-        <NavItem
-          label="Dashboard"
-          active={isActive("/")}
-          onClick={() => navigate("/")}
-        />
+        <NavItem label="Dashboard" active={isActive("/")} onClick={() => navigate("/")} />
+        <NavItem label="Convert" active={isActive("/convert")} onClick={() => navigate("/convert")} />
+        <NavItem label="Upload" active={isActive("/upload")} onClick={() => navigate("/upload")} />
+        <NavItem label="Vault" active={isActive("/vault")} onClick={() => navigate("/vault")} />
 
-        <NavItem
-          label="Convert"
-          active={isActive("/convert")}
-          onClick={() => navigate("/convert")}
-        />
-
-        <NavItem
-          label="Upload"
-          active={isActive("/upload")}
-          onClick={() => navigate("/upload")}
-        />
-
-        <NavItem
-          label="Vault"
-          active={isActive("/vault")}
-          onClick={() => navigate("/vault")}
-        />
+        {user && (
+          <>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginLeft: 16 }}>
+              {user.email}
+            </span>
+            <NavItem label="Salir" active={false} onClick={handleLogout} />
+          </>
+        )}
       </div>
     </div>
   );
