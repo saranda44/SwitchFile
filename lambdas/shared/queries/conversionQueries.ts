@@ -3,7 +3,7 @@
  * Usa DocumentClient de @aws-sdk/lib-dynamodb
  */
 
-import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getDocClient } from '../connections/dynamoDBClient';
 import {
   AWS_RESOURCES,
@@ -31,6 +31,7 @@ export async function createConversion(
       PK,
       SK,
       sourceFileId: conversionInput.sourceFileId,
+      sourceFileName: conversionInput.sourceFileName,
       sourceFormat: conversionInput.sourceFormat,
       targetFormat: conversionInput.targetFormat,
       status: 'pending',
@@ -133,81 +134,5 @@ export async function getConversionsByFileId(
   } catch (error) {
     console.error('[getConversionsByFileId] Error:', error);
     throw new Error('Error al obtener conversiones del archivo');
-  }
-}
-
-/**
- * Actualizar el estado de una conversión
- * pending → processing → completed/failed
- */
-export async function updateConversionStatus(
-  userId: string,
-  conversionId: string,
-  statusUpdate: UpdateConversionStatusInput
-): Promise<Conversion> {
-  try {
-    // Primero obtenemos la conversión para obtener su SK completa
-    const conversion = await getConversionById(userId, conversionId);
-    if (!conversion) {
-      throw new Error('Conversión no encontrada');
-    }
-
-    const updateExpressions: string[] = [];
-    const expressionAttributeValues: Record<string, any> = {
-      ':status': statusUpdate.status,
-    };
-
-    updateExpressions.push('#status = :status');
-
-    if (statusUpdate.completedAt) {
-      updateExpressions.push('completedAt = :completedAt');
-      expressionAttributeValues[':completedAt'] = statusUpdate.completedAt;
-    }
-
-    const command = new UpdateCommand({
-      TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
-      Key: {
-        PK: conversion.PK,
-        SK: conversion.SK,
-      },
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
-      ExpressionAttributeNames: {
-        '#status': 'status',
-      },
-      ExpressionAttributeValues: expressionAttributeValues,
-      ReturnValues: 'ALL_NEW',
-    });
-
-    const response = await getDocClient().send(command);
-    return response.Attributes as Conversion;
-  } catch (error) {
-    console.error('[updateConversionStatus] Error:', error);
-    throw new Error('Error al actualizar estado de conversión');
-  }
-}
-
-/**
- * Obtener conversiones de un lote específico
- */
-export async function getConversionsByBatchId(
-  userId: string,
-  batchId: string
-): Promise<Conversion[]> {
-  try {
-    const command = new QueryCommand({
-      TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
-      KeyConditionExpression: 'PK = :pk',
-      FilterExpression: 'batchId = :batchId',
-      ExpressionAttributeValues: {
-        ':pk': generateConversionPK(userId),
-        ':batchId': batchId,
-      },
-    });
-
-    const response = await getDocClient().send(command);
-    return (response.Items as Conversion[]) || [];
-  } catch (error) {
-    console.error('[getConversionsByBatchId] Error:', error);
-    throw new Error('Error al obtener conversiones del lote');
   }
 }
