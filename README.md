@@ -28,3 +28,10 @@ En cuanto al uso esperado en la práctica, se espera que un usuario acceda a la 
 
 
 ---
+
+### Documentación
+
+Link: https://docs.google.com/document/d/1Tt2ffRLKaDgMt0MbkFgCL7ji55A1hY49sRW7quf5pQc/edit?usp=sharing
+
+
+---
