@@ -5,7 +5,7 @@
  */
 
 import { SendMessageBatchCommand, SendMessageBatchRequestEntry } from '@aws-sdk/client-sqs';
-import { StepFunctionEvent, EnqueueStepResult, SQSConversionMessage } from '../shared/types/Stepfunctionevent';
+import { StepFunctionEvent, SQSConversionMessage } from '../shared/types/Stepfunctionevent';
 import { getSQSClient } from '../shared/connections/sqsClient';
 import { AWS_RESOURCES } from '../shared/constants/awsResourceNames';
 
@@ -48,7 +48,7 @@ export async function handler(event: StepFunctionEvent): Promise<StepFunctionEve
     messageIds.push(...(response.Successful ?? []).map(s => s.MessageId!));
   }
 
-  const enqueueResult: EnqueueStepResult = {
+  const enqueueResult: { messageIds: string[] } = {
     messageIds,
   };
 

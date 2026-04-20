@@ -51,6 +51,7 @@ async function handleSingle(event: StepFunctionEvent): Promise<StepFunctionEvent
   const conversionId = randomUUID();
   await createConversion(userId, conversionId, {
     sourceFileId: fileId,
+    sourceFileName: fileName,
     sourceFormat: fileFormat,
     targetFormat,
     isBatch: false,
@@ -102,6 +103,7 @@ async function handleBatch(event: StepFunctionEvent): Promise<StepFunctionEvent>
     const conversionId = randomUUID();
     await createConversion(userId, conversionId, {
       sourceFileId: fileId,
+      sourceFileName: fileName,
       sourceFormat: fileFormat,
       targetFormat: resolvedTarget,
       isBatch: true,
