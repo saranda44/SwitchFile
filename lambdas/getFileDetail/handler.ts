@@ -1,5 +1,5 @@
 import { APIGatewayEvent, LambdaResponse } from "../shared/types";
-import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { AWS_RESOURCES } from '../shared/constants/awsResourceNames';
 import { getDocClient } from '../shared/connections/dynamoDBClient';
 
@@ -34,29 +34,18 @@ export const handler = async (
       };
     }
 
-    /**
-     * Normalización del SK:
-     * - Si ya viene con prefijo → usarlo
-     * - Si no → construirlo
-     * */
-    const SK = id.startsWith("CONV#") ? id : `CONV#${id}`;
-
-    /**
-     * Consulta directa por PK + SK (GetItem).
-     */
-    const command = new GetCommand({
+    const command = new QueryCommand({
       TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
-      Key: {
-        PK: `USER#${userId}`,
-        SK: SK,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+      ExpressionAttributeValues: {
+        ":pk": `USER#${userId}`,
+        ":skPrefix": "CONV#",
       },
     });
 
-    const { Item } = await getDocClient().send(command);
+    const { Items } = await getDocClient().send(command);
+    const Item = Items?.find((item) => item.SK.endsWith(`#${id}`));
 
-    /**
-     * Manejo de recurso no encontrado.
-     */
     if (!Item) {
       return {
         statusCode: 404,
