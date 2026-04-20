@@ -1,17 +1,7 @@
-import { APIGatewayProxyEventV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { APIGatewayEvent, LambdaResponse } from "../shared/types";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
-import { LambdaResponse, JwtAuthorizer } from "../../types/api";
-
-/**
- * Cliente reutilizable de DynamoDB.
- */
-const client = new DynamoDBClient({});
-
-/**
- * Tabla de conversiones (metadata del proceso).
- */
-const TABLE_NAME = process.env.CONVERSIONS_TABLE as string;
+import { AWS_RESOURCES } from '../shared/constants/awsResourceNames';
+import { getDocClient } from '../shared/connections/dynamoDBClient';
 
 /**
  * Handler para GET /files/{id}
@@ -19,14 +9,13 @@ const TABLE_NAME = process.env.CONVERSIONS_TABLE as string;
  * Obtiene el detalle de una conversión específica.
  */
 export const handler = async (
-  event: APIGatewayProxyEventV2
+  event: APIGatewayEvent
 ): Promise<LambdaResponse> => {
   try {
     /**
      * Obtiene userId desde JWT validado.
      */
-    const authorizer = event.requestContext.authorizer as JwtAuthorizer;
-    const userId = authorizer.jwt.claims.sub;
+    const userId = event.requestContext.authorizer.jwt.claims.sub;
 
     /**
      * Obtiene el parámetro path {id}.
@@ -56,14 +45,14 @@ export const handler = async (
      * Consulta directa por PK + SK (GetItem).
      */
     const command = new GetCommand({
-      TableName: TABLE_NAME,
+      TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
       Key: {
         PK: `USER#${userId}`,
         SK: SK,
       },
     });
 
-    const { Item } = await client.send(command);
+    const { Item } = await getDocClient().send(command);
 
     /**
      * Manejo de recurso no encontrado.
