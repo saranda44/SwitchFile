@@ -8,6 +8,7 @@ export interface Conversion {
 
   // Atributos principales
   sourceFileId: string; // FILE#{file_id} del archivo original
+  sourceFileName: string; // Nombre del archivo original (desnormalizado para evitar lookup extra)
   resultFileId?: string; // FILE#{file_id} del archivo convertido (opcional hasta que se complete)
   sourceFormat: string; // Formato original (mp4, pdf, png, etc.)
   targetFormat: string; // Formato destino (mp3, docx, jpg, etc.)
@@ -31,6 +32,7 @@ export type ConversionStatus = 'pending' | 'processing' | 'completed' | 'failed'
  */
 export interface CreateConversionInput {
   sourceFileId: string;
+  sourceFileName: string;
   sourceFormat: string;
   targetFormat: string;
   isBatch: boolean;

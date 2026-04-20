@@ -133,13 +133,3 @@ export function extractPathParameter(
     return null;
   }
 }
-
-
-
-/**
- * Obtener fecha y hora actual en formato ISO
- * Formato: YYYY-MM-DDThh:mm:ss (sin milisegundos)
- */
-export function getCurrentISOString(): string {
-  return new Date().toISOString().split('.')[0];
-}
