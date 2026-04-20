@@ -59,7 +59,7 @@ cd "$ROOT_DIR"
 echo "Paso 1: Compilando TypeScript..."
 cd "$LAMBDAS_DIR"
 
-npm run build > /dev/null 2>&1 || {
+npm run build 2>&1 || {
     echo " Error en npm run build"
     exit 1
 }

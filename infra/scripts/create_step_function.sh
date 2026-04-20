@@ -17,7 +17,7 @@ echo "  Creando Step Function"
 echo "═══════════════════════════════════════"
 echo ""
 
-# Obtener Role ARN (Learner Lab)
+# Obtener Role ARN
 ROLE_ARN=$(aws iam get-role --role-name SwitchFileRole --query 'Role.Arn' --output text)
 
 # Reemplazar $AWS_ACCOUNT en el archivo con la cuenta real
