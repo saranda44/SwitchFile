@@ -2,11 +2,11 @@ import { useState } from "react";
 import { api } from "../utils/api";
 import Button from "../components/Button";
 
-export default function ConvertPage() {
+export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState("");
 
-  // detector robusto
+  // detector robusto (NO usar file.type)
   const getFileType = (file: File) => {
     const name = file.name.toLowerCase();
 
@@ -26,15 +26,15 @@ export default function ConvertPage() {
 
   const formats = file ? formatOptions[getFileType(file)] : [];
 
-  const handleConvert = async () => {
+  const handleUpload = async () => {
     if (!file || !format) {
       alert("Selecciona archivo y formato");
       return;
     }
 
     try {
-      await api.convertFile("mock", format);
-      alert("Conversión iniciada ");
+      await api.uploadFile(file);
+      alert("Archivo subido");
     } catch {
       alert("Modo demo");
     }
@@ -42,7 +42,7 @@ export default function ConvertPage() {
 
   return (
     <div className="container">
-      <h1>Nueva conversión</h1>
+      <h1>Subir archivo</h1>
 
       <div className="card">
         {/* input */}
@@ -90,8 +90,8 @@ export default function ConvertPage() {
         {/* botón */}
         <div style={{ display: "flex", marginTop: 20 }}>
           <div style={{ marginLeft: "auto" }}>
-            <Button onClick={handleConvert} disabled={!format}>
-              Convertir
+            <Button onClick={handleUpload} disabled={!format}>
+              Subir
             </Button>
           </div>
         </div>
