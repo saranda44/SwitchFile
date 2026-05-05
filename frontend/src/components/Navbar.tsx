@@ -33,12 +33,6 @@ export default function Navbar() {
         />
 
         <NavItem
-          label="Upload"
-          active={isActive("/upload")}
-          onClick={() => navigate("/upload")}
-        />
-
-        <NavItem
           label="Vault"
           active={isActive("/vault")}
           onClick={() => navigate("/vault")}

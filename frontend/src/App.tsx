@@ -1,17 +1,19 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
-import Navbar from "../src/components/Navbar";
-import LoginPage from "../src/pages/LoginPage";
-import DashboardPage from "../src/pages/DashboardPage";
-import ConvertPage from "../src/pages/ConvertPage";
-import UploadPage from "../src/pages/UploadPage";
-import VaultPage from "../src/pages/VaultPage";
+import Navbar from "./components/Navbar";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import ConvertPage from "./pages/ConvertPage";
+import VaultPage from "./pages/VaultPage";
 import ConversionDetailPage from "./pages/ConversionDetailPage";
+import RegisterPage from "./pages/RegisterPage";
 
 function Layout() {
   const location = useLocation();
 
-  const hideNavbar = location.pathname === "/login";
+  const hideNavbar =
+    location.pathname === "/login" ||
+    location.pathname === "/register"; 
 
   return (
     <div className="app-container" style={{ paddingTop: "80px" }}>
@@ -19,9 +21,10 @@ function Layout() {
 
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
         <Route path="/" element={<DashboardPage />} />
         <Route path="/convert" element={<ConvertPage />} />
-        <Route path="/upload" element={<UploadPage />} />
         <Route path="/vault" element={<VaultPage />} />
         <Route path="/conversion/:id" element={<ConversionDetailPage />} />
       </Routes>
