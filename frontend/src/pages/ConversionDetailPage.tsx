@@ -1,34 +1,40 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { api } from "../utils/api";
+import type { Conversion } from "../types";
 
-type Status = "pending" | "processing" | "completed" | "failed";
+const statusLabel: Record<string, string> = {
+  pending: "Pendiente",
+  processing: "Procesando",
+  completed: "Completado",
+  failed: "Error",
+};
 
 export default function ConversionDetailPage() {
-  const [status, setStatus] = useState<Status>("pending");
+  const { id } = useParams<{ id: string }>();
+  const [conversion, setConversion] = useState<Conversion | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStatus((prev) => {
-        if (prev === "pending") return "processing";
-        if (prev === "processing") return "completed";
-        return prev;
-      });
-    }, 3000);
+    if (!id) return;
+    api.getFileById(id).then(setConversion).catch(() => setError("No se pudo cargar la conversión."));
+  }, [id]);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  const statusText: Record<Status, string> = {
-    pending: "Pendiente",
-    processing: "Procesando",
-    completed: "Completado",
-    failed: "Error",
-  };
+  if (error) return <div className="container"><p>{error}</p></div>;
+  if (!conversion) return <div className="container"><p>Cargando...</p></div>;
 
   return (
     <div className="container">
       <div className="card">
         <h2>Estado de conversión</h2>
-        <p>{statusText[status]}</p>
+        <p><strong>Archivo:</strong> {conversion.sourceFileName}</p>
+        <p><strong>Formato:</strong> {conversion.sourceFormat.toUpperCase()} → {conversion.targetFormat.toUpperCase()}</p>
+        <p><strong>Estado:</strong> {statusLabel[conversion.status] ?? conversion.status}</p>
+        {conversion.errorMessage && <p><strong>Error:</strong> {conversion.errorMessage}</p>}
+        <p><strong>Creado:</strong> {new Date(conversion.createdAt).toLocaleString()}</p>
+        {conversion.isBatch && conversion.batchId && (
+          <p><strong>Batch ID:</strong> {conversion.batchId}</p>
+        )}
       </div>
     </div>
   );

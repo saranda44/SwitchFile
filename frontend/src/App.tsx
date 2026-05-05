@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 
 import Navbar from "../src/components/Navbar";
 import LoginPage from "../src/pages/LoginPage";
@@ -8,6 +10,13 @@ import VaultPage from "../src/pages/VaultPage";
 import ConversionDetailPage from "../src/pages/ConversionDetailPage";
 import RegisterPage from "../src/pages/RegisterPage";
 
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Cargando...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 function Layout() {
   const location = useLocation();

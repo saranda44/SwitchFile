@@ -1,10 +1,17 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   return (
     <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
@@ -16,6 +23,7 @@ export default function Navbar() {
           width: "100%",
           display: "flex",
           justifyContent: "center",
+          alignItems: "center",
           zIndex: 1000,
           paddingTop: "10px",
         }}
