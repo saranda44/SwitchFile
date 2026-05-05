@@ -1,12 +1,13 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
-import Navbar from "./components/Navbar";
-import LoginPage from "./pages/LoginPage";
-import DashboardPage from "./pages/DashboardPage";
-import ConvertPage from "./pages/ConvertPage";
-import VaultPage from "./pages/VaultPage";
-import ConversionDetailPage from "./pages/ConversionDetailPage";
-import RegisterPage from "./pages/RegisterPage";
+import Navbar from "../src/components/Navbar";
+import LoginPage from "../src/pages/LoginPage";
+import DashboardPage from "../src/pages/DashboardPage";
+import ConvertPage from "../src/pages/ConvertPage";
+import VaultPage from "../src/pages/VaultPage";
+import ConversionDetailPage from "../src/pages/ConversionDetailPage";
+import RegisterPage from "../src/pages/RegisterPage";
+
 
 function Layout() {
   const location = useLocation();
