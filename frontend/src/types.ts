@@ -1,6 +1,7 @@
 export interface Conversion {
-  conversionId: string; // derived from SK: CONV#timestamp#uuid
+  conversionId: string;
   sourceFileId: string;
+  resultFileId?: string;
   sourceFileName?: string;
   sourceFormat: string;
   targetFormat: string;
@@ -9,6 +10,7 @@ export interface Conversion {
   isBatch: boolean;
   batchId?: string;
   createdAt: string;
+  completedAt?: string;
   PK?: string;
   SK?: string;
 }

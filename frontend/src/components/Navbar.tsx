@@ -45,6 +45,16 @@ export default function Navbar() {
           active={isActive("/vault")}
           onClick={() => navigate("/vault")}
         />
+
+        {user && (
+          <>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginLeft: 16 }}>
+              {user.email}
+            </span>
+            <NavItem label="Salir" active={false} onClick={handleLogout} />
+          </>
+        )}
+        
       </div>
     </div>
   );
