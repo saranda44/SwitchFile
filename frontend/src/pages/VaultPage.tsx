@@ -9,53 +9,48 @@ export default function VaultPage() {
 
   useEffect(() => {
     api.getVault()
-      .then((data) => {
-        const map: any = {};
+      .then(async (files) => {
+        const originals = files.filter((f) => f.type === "original");
+        const convertedMap = new Map<string, any>();
+        files
+          .filter((f) => f.type === "converted")
+          .forEach((f) => {
+            convertedMap.set(f.fileId, f);
+          });
 
-        data.forEach((file: any) => {
-          if (!file.originalId) return;
-
-          if (!map[file.originalId]) {
-            map[file.originalId] = {
-              originalName: file.originalName,
-              originalUrl: file.originalUrl,
-              files: [],
-              createdAt: file.createdAt,
+        const grouped = await Promise.all(
+          originals.map(async (original) => {
+            const detail = await api.getVaultFile(original.fileId);
+            return {
+              originalName: original.fileName,
+              originalUrl: original.preview?.url || "/landscape-placeholder.svg",
+              createdAt: original.createdAt,
+              originalFileId: original.fileId,
+              files: detail.conversions.map((conv) => {
+                // resultFileId can be undefined, guard before using as map key
+                const converted = conv.resultFileId
+                  ? convertedMap.get(conv.resultFileId)
+                  : undefined;
+                return {
+                  ...conv,
+                  id: conv.conversionId,
+                  fileName: `${original.fileName.split(".")[0]}.${conv.targetFormat}`,
+                  url: converted?.preview?.url || "/landscape-placeholder.svg",
+                };
+              }),
             };
-          }
+          })
+        );
 
-          map[file.originalId].files.push(file);
-        });
-
-        const grouped = Object.values(map).sort(
-          (a: any, b: any) =>
+        const sorted = grouped.sort(
+          (a, b) =>
             new Date(b.createdAt).getTime() -
             new Date(a.createdAt).getTime()
         );
 
-        setGroups(grouped);
+        setGroups(sorted);
       })
-      .catch(() => {
-        setGroups([
-          {
-            originalName: "imagen.jpg",
-            originalUrl: "https://via.placeholder.com/150",
-            createdAt: new Date().toISOString(),
-            files: [
-              {
-                id: "1",
-                fileName: "imagen.png",
-                url: "https://via.placeholder.com/300",
-              },
-              {
-                id: "2",
-                fileName: "imagen.webp",
-                url: "https://via.placeholder.com/300",
-              },
-            ],
-          },
-        ]);
-      });
+      .catch(console.error);
   }, []);
 
   const toggle = (index: number) => {
@@ -63,21 +58,21 @@ export default function VaultPage() {
   };
 
   const renderPreview = (file: any) => {
-    if (!file?.url) return <p>Sin preview</p>;
+    const url = file?.url;
 
-    if (file.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-      return <img src={file.url} style={{ width: "100%", borderRadius: 10 }} />;
+    if (url?.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
+      return <img src={url} style={{ width: "100%", borderRadius: 10 }} />;
     }
 
-    if (file.url.match(/\.(mp4|webm|mov)$/i)) {
-      return <video src={file.url} controls style={{ width: "100%" }} />;
+    if (url?.match(/\.(mp4|webm|mov)(\?|$)/i)) {
+      return <video src={url} controls style={{ width: "100%" }} />;
     }
 
-    if (file.url.match(/\.pdf$/i)) {
-      return <iframe src={file.url} style={{ width: "100%", height: 300 }} />;
+    if (url?.match(/\.pdf(\?|$)/i)) {
+      return <iframe src={url} style={{ width: "100%", height: 300 }} />;
     }
 
-    return <p>Preview no disponible</p>;
+    return <img src="/landscape-placeholder.svg" style={{ width: "100%", borderRadius: 10 }} />;
   };
 
   return (
@@ -184,7 +179,11 @@ export default function VaultPage() {
                 flexWrap: "wrap",
               }}
             >
-              <Button onClick={() => api.downloadFile(selected.id)}>
+              <Button
+                onClick={() => {
+                  window.location.href = selected.url;
+                }}
+              >
                 Descargar
               </Button>
 
