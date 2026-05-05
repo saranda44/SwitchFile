@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/Button";
-import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
-  const navigate = useNavigate();
 
   if (user) return <Navigate to="/" replace />;
 

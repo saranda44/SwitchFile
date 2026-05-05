@@ -33,10 +33,10 @@ function Layout() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/convert" element={<ConvertPage />} />
-        <Route path="/vault" element={<VaultPage />} />
-        <Route path="/conversion/:id" element={<ConversionDetailPage />} />
+        <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/convert" element={<ProtectedRoute><ConvertPage /></ProtectedRoute>} />
+        <Route path="/vault" element={<ProtectedRoute><VaultPage /></ProtectedRoute>} />
+        <Route path="/conversion/:id" element={<ProtectedRoute><ConversionDetailPage /></ProtectedRoute>} />
       </Routes>
     </div>
   );
