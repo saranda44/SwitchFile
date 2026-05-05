@@ -6,9 +6,10 @@ import Navbar from "../src/components/Navbar";
 import LoginPage from "../src/pages/LoginPage";
 import DashboardPage from "../src/pages/DashboardPage";
 import ConvertPage from "../src/pages/ConvertPage";
-import UploadPage from "../src/pages/UploadPage";
 import VaultPage from "../src/pages/VaultPage";
-import ConversionDetailPage from "./pages/ConversionDetailPage";
+import ConversionDetailPage from "../src/pages/ConversionDetailPage";
+import RegisterPage from "../src/pages/RegisterPage";
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,7 +20,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function Layout() {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/login";
+
+  const hideNavbar =
+    location.pathname === "/login" ||
+    location.pathname === "/register"; 
 
   return (
     <div className="app-container" style={{ paddingTop: "80px" }}>
@@ -27,11 +31,12 @@ function Layout() {
 
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/convert" element={<ProtectedRoute><ConvertPage /></ProtectedRoute>} />
-        <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
-        <Route path="/vault" element={<ProtectedRoute><VaultPage /></ProtectedRoute>} />
-        <Route path="/conversion/:id" element={<ProtectedRoute><ConversionDetailPage /></ProtectedRoute>} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/convert" element={<ConvertPage />} />
+        <Route path="/vault" element={<VaultPage />} />
+        <Route path="/conversion/:id" element={<ConversionDetailPage />} />
       </Routes>
     </div>
   );

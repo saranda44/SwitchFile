@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "aws-amplify": "^6.16.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
