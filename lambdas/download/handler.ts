@@ -46,6 +46,7 @@ export async function handler(event: APIGatewayEvent) {
   const command = new GetObjectCommand({
     Bucket: bucket,
     Key: file.s3Key,
+    ResponseContentDisposition: `attachment; filename="${file.fileName}"`,
   });
 
   const url = await getSignedUrl(getS3Client(), command, {
