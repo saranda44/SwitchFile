@@ -28,10 +28,23 @@ export default function Navbar() {
           paddingTop: "10px",
         }}
       >
-        <NavItem label="Dashboard" active={isActive("/")} onClick={() => navigate("/")} />
-        <NavItem label="Convert" active={isActive("/convert")} onClick={() => navigate("/convert")} />
-        <NavItem label="Upload" active={isActive("/upload")} onClick={() => navigate("/upload")} />
-        <NavItem label="Vault" active={isActive("/vault")} onClick={() => navigate("/vault")} />
+        <NavItem
+          label="Dashboard"
+          active={isActive("/")}
+          onClick={() => navigate("/")}
+        />
+
+        <NavItem
+          label="Convert"
+          active={isActive("/convert")}
+          onClick={() => navigate("/convert")}
+        />
+
+        <NavItem
+          label="Vault"
+          active={isActive("/vault")}
+          onClick={() => navigate("/vault")}
+        />
 
         {user && (
           <>
@@ -41,6 +54,7 @@ export default function Navbar() {
             <NavItem label="Salir" active={false} onClick={handleLogout} />
           </>
         )}
+        
       </div>
     </div>
   );

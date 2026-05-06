@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { signIn, signOut, getCurrentUser, fetchAuthSession } from "aws-amplify/auth";
+import { signIn, signOut, getCurrentUser, fetchAuthSession, signUp, confirmSignUp } from "aws-amplify/auth";
 
 interface AuthUser {
   userId: string;
@@ -13,6 +13,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getToken: () => Promise<string>;
+  register: (username: string, email: string, password: string) => Promise<unknown>;
+  verifyCode: (username: string, code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -57,8 +59,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return session.tokens?.idToken?.toString() ?? "";
   };
 
+  const register = async (username: string, email: string, password: string) => {
+    const result = await signUp({
+      username: email,
+      password,
+      options: {
+        userAttributes: {
+          email,
+          preferred_username: username,
+        },
+      },
+    });
+    return result;
+  };
+
+  const verifyCode = async (username: string, code: string) => {
+    await confirmSignUp({
+      username,
+      confirmationCode: code,
+    });
+    await checkCurrentUser();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, getToken }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, getToken, register, verifyCode }}>
       {children}
     </AuthContext.Provider>
   );
