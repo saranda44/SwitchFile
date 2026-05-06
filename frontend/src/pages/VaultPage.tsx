@@ -2,60 +2,74 @@ import { useEffect, useState } from "react";
 import { api } from "../utils/api";
 import Button from "../components/Button";
 
+const formatOptions: Record<string, string[]> = {
+  image: ["png", "jpg", "webp", "gif"],
+  audio: ["mp3", "wav", "ogg"],
+  video: ["mp4", "mov", "webm"],
+  document: ["pdf", "txt", "html"],
+};
+
+const mapExtToType = (ext: string): keyof typeof formatOptions => {
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
+  if (["mp4", "mov", "webm"].includes(ext)) return "video";
+  return "document";
+};
+
 export default function VaultPage() {
   const [groups, setGroups] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
+  const [selectedOriginal, setSelectedOriginal] = useState<any | null>(null);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [reconvertMode, setReconvertMode] = useState(false);
+  const [selectedReconvertFormat, setSelectedReconvertFormat] = useState("");
+  const [reconvertOriginalMode, setReconvertOriginalMode] = useState(false);
+  const [selectedOriginalReconvertFormat, setSelectedOriginalReconvertFormat] = useState("");
 
   useEffect(() => {
     api.getVault()
-      .then((data) => {
-        const map: any = {};
+      .then(async (files) => {
+        const originals = files.filter((f) => f.type === "original");
+        const convertedMap = new Map<string, any>();
+        files
+          .filter((f) => f.type === "converted")
+          .forEach((f) => {
+            convertedMap.set(f.fileId, f);
+          });
 
-        data.forEach((file: any) => {
-          if (!file.originalId) return;
-
-          if (!map[file.originalId]) {
-            map[file.originalId] = {
-              originalName: file.originalName,
-              originalUrl: file.originalUrl,
-              files: [],
-              createdAt: file.createdAt,
+        const grouped = await Promise.all(
+          originals.map(async (original) => {
+            const detail = await api.getVaultFile(original.fileId);
+            return {
+              originalName: original.fileName,
+              originalUrl: original.preview?.url || "/landscape-placeholder.svg",
+              createdAt: original.createdAt,
+              originalFileId: original.fileId,
+              files: detail.conversions.map((conv) => {
+                // resultFileId can be undefined, guard before using as map key
+                const converted = conv.resultFileId
+                  ? convertedMap.get(conv.resultFileId)
+                  : undefined;
+                return {
+                  ...conv,
+                  id: conv.conversionId,
+                  fileName: `${original.fileName.split(".")[0]}.${conv.targetFormat}`,
+                  url: converted?.preview?.url || "/placeholder.png",
+                };
+              }),
             };
-          }
+          })
+        );
 
-          map[file.originalId].files.push(file);
-        });
-
-        const grouped = Object.values(map).sort(
-          (a: any, b: any) =>
+        const sorted = grouped.sort(
+          (a, b) =>
             new Date(b.createdAt).getTime() -
             new Date(a.createdAt).getTime()
         );
 
-        setGroups(grouped);
+        setGroups(sorted);
       })
-      .catch(() => {
-        setGroups([
-          {
-            originalName: "imagen.jpg",
-            originalUrl: "https://via.placeholder.com/150",
-            createdAt: new Date().toISOString(),
-            files: [
-              {
-                id: "1",
-                fileName: "imagen.png",
-                url: "https://via.placeholder.com/300",
-              },
-              {
-                id: "2",
-                fileName: "imagen.webp",
-                url: "https://via.placeholder.com/300",
-              },
-            ],
-          },
-        ]);
-      });
+      .catch(console.error);
   }, []);
 
   const toggle = (index: number) => {
@@ -63,21 +77,21 @@ export default function VaultPage() {
   };
 
   const renderPreview = (file: any) => {
-    if (!file?.url) return <p>Sin preview</p>;
+    const url = file?.url;
 
-    if (file.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-      return <img src={file.url} style={{ width: "100%", borderRadius: 10 }} />;
+    if (url?.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
+      return <img src={url} style={{ width: "100%", borderRadius: 10 }} />;
     }
 
-    if (file.url.match(/\.(mp4|webm|mov)$/i)) {
-      return <video src={file.url} controls style={{ width: "100%" }} />;
+    if (url?.match(/\.(mp4|webm|mov)(\?|$)/i)) {
+      return <video src={url} controls style={{ width: "100%" }} />;
     }
 
-    if (file.url.match(/\.pdf$/i)) {
-      return <iframe src={file.url} style={{ width: "100%", height: 300 }} />;
+    if (url?.match(/\.pdf(\?|$)/i)) {
+      return <iframe src={url} style={{ width: "100%", height: 300 }} />;
     }
 
-    return <p>Preview no disponible</p>;
+    return <img src="/placeholder.png" style={{ width: "100%", height: "auto", borderRadius: 10, objectFit: "contain", margin: "0 auto", display: "block" }} />;
   };
 
   return (
@@ -99,25 +113,43 @@ export default function VaultPage() {
             >
               {/* HEADER (CLICKABLE) */}
               <div
-                onClick={() => toggle(i)}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "12px 16px",
-                  cursor: "pointer",
                 }}
               >
-                <div>
+                <div onClick={() => toggle(i)} style={{ cursor: "pointer", flex: 1 }}>
                   <strong>{group.originalName}</strong>
                   <p style={{ fontSize: 12, opacity: 0.6 }}>
                     Conversión
                   </p>
                 </div>
 
-                <span style={{ fontSize: 18 }}>
-                  {isOpen ? "▲" : "▼"}
-                </span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {isOpen && (
+                    <Button
+                      onClick={() =>
+                        setSelectedOriginal({
+                          fileName: group.originalName,
+                          url: group.originalUrl,
+                          fileId: group.originalFileId,
+                          groupIndex: i,
+                        })
+                      }
+                      style={{ padding: "6px 12px", fontSize: "12px" }}
+                    >
+                      Ver Original
+                    </Button>
+                  )}
+                  <span
+                    onClick={() => toggle(i)}
+                    style={{ fontSize: 18, cursor: "pointer" }}
+                  >
+                    {isOpen ? "▲" : "▼"}
+                  </span>
+                </div>
               </div>
 
               {/* CONTENIDO */}
@@ -131,29 +163,31 @@ export default function VaultPage() {
                     borderTop: "1px solid rgba(255,255,255,0.1)",
                   }}
                 >
-                  {group.files.map((file: any) => (
-                    <div
-                      key={file.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 10px",
-                        borderRadius: 8,
-                        background: "rgba(255,255,255,0.05)",
-                      }}
-                    >
-                      <span>{file.fileName}</span>
-
-                      <Button
-                        onClick={() =>
-                          setSelected({ ...file, ...group })
-                        }
+                  {group.files
+                    .filter((file: any) => file.status !== "failed")
+                    .map((file: any) => (
+                      <div
+                        key={file.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.05)",
+                        }}
                       >
-                        Más
-                      </Button>
-                    </div>
-                  ))}
+                        <span>{file.fileName}</span>
+
+                        <Button
+                          onClick={() =>
+                            setSelected({ ...file, ...group })
+                          }
+                        >
+                          Más
+                        </Button>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>
@@ -161,7 +195,7 @@ export default function VaultPage() {
         })}
       </div>
 
-      {/* MODAL */}
+      {/* MODAL CONVERSIÓN */}
       {selected && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
@@ -172,32 +206,252 @@ export default function VaultPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 20, maxHeight: 400, overflow: "hidden", borderRadius: 12 }}>
               {renderPreview(selected)}
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <Button onClick={() => api.downloadFile(selected.id)}>
-                Descargar
-              </Button>
-
-              <Button onClick={() => alert("Reconvertir")}>
-                Convertir otra vez
-              </Button>
-
-              <Button
-                onClick={() => window.open(selected.originalUrl, "_blank")}
+            {!reconvertMode ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
               >
-                Original
-              </Button>
+                <Button
+                  onClick={async () => {
+                    const data = await api.downloadFile(selected.resultFileId);
+                    window.location.href = data.url;
+                  }}
+                >
+                  Descargar
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setReconvertMode(true);
+                    setSelectedReconvertFormat("");
+                  }}
+                >
+                  Convertir otra vez
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setSelected(null);
+                    setSelectedOriginal({
+                      fileName: selected.originalName,
+                      url: selected.originalUrl,
+                      fileId: selected.originalFileId,
+                      groupIndex: groups.findIndex(
+                        (g) => g.originalFileId === selected.originalFileId
+                      ),
+                    });
+                  }}
+                >
+                  Original
+                </Button>
+              </div>
+            ) : (
+              <div style={{ marginTop: 20 }}>
+                <p style={{ marginBottom: 10 }}>Selecciona formato destino:</p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 15 }}>
+                  {formatOptions[mapExtToType(selected.sourceFormat)]?.map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => setSelectedReconvertFormat(fmt)}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "10px",
+                        border: "none",
+                        cursor: "pointer",
+                        background:
+                          selectedReconvertFormat === fmt
+                            ? "#6366f1"
+                            : "rgba(255,255,255,0.1)",
+                        color: "white",
+                      }}
+                      disabled={fmt === selected.sourceFormat}
+                    >
+                      {fmt.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Button
+                    onClick={() => {
+                      setReconvertMode(false);
+                      setSelectedReconvertFormat("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await api.reconvertFile(
+                          selected.originalFileId,
+                          selectedReconvertFormat
+                        );
+                        alert(
+                          `Reconversión iniciada: ${response.status || "En proceso"}`
+                        );
+                        setReconvertMode(false);
+                        setSelectedReconvertFormat("");
+                        setSelected(null);
+                      } catch (error) {
+                        alert(
+                          `Error: ${
+                            error instanceof Error
+                              ? error.message
+                              : "No se pudo iniciar reconversión"
+                          }`
+                        );
+                      }
+                    }}
+                    disabled={!selectedReconvertFormat}
+                  >
+                    Reconvertir
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ORIGINAL */}
+      {selectedOriginal && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <div style={headerStyle}>
+              <h2>{selectedOriginal.fileName}</h2>
+              <button onClick={() => setSelectedOriginal(null)} style={closeBtn}>
+                ✖
+              </button>
             </div>
+
+            <div style={{ marginBottom: 20, maxHeight: 400, overflow: "hidden", borderRadius: 12 }}>
+              {renderPreview(selectedOriginal)}
+            </div>
+
+            {!reconvertOriginalMode ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Button
+                  onClick={async () => {
+                    const data = await api.downloadFile(selectedOriginal.fileId);
+                    window.location.href = data.url;
+                  }}
+                >
+                  Descargar
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setReconvertOriginalMode(true);
+                    setSelectedOriginalReconvertFormat("");
+                  }}
+                >
+                  Convertir otra vez
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setSelectedOriginal(null);
+                    setOpenIndex(selectedOriginal.groupIndex);
+                    setSelected(null);
+                  }}
+                >
+                  Conversiones
+                </Button>
+              </div>
+            ) : (
+              <div style={{ marginTop: 20 }}>
+                <p style={{ marginBottom: 10 }}>Selecciona formato destino:</p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 15 }}>
+                  {formatOptions[mapExtToType(selectedOriginal.url.split(".").pop()?.toLowerCase() || "")]?.map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => setSelectedOriginalReconvertFormat(fmt)}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "10px",
+                        border: "none",
+                        cursor: "pointer",
+                        background:
+                          selectedOriginalReconvertFormat === fmt
+                            ? "#6366f1"
+                            : "rgba(255,255,255,0.1)",
+                        color: "white",
+                      }}
+                    >
+                      {fmt.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Button
+                    onClick={() => {
+                      setReconvertOriginalMode(false);
+                      setSelectedOriginalReconvertFormat("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await api.reconvertFile(
+                          selectedOriginal.fileId,
+                          selectedOriginalReconvertFormat
+                        );
+                        alert(
+                          `Reconversión iniciada: ${response.status || "En proceso"}`
+                        );
+                        setReconvertOriginalMode(false);
+                        setSelectedOriginalReconvertFormat("");
+                        setSelectedOriginal(null);
+                      } catch (error) {
+                        alert(
+                          `Error: ${
+                            error instanceof Error
+                              ? error.message
+                              : "No se pudo iniciar reconversión"
+                          }`
+                        );
+                      }
+                    }}
+                    disabled={!selectedOriginalReconvertFormat}
+                  >
+                    Reconvertir
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

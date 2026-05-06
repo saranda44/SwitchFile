@@ -1,9 +1,11 @@
 import { useState } from "react";
 import JSZip from "jszip";
+import { useNavigate } from "react-router-dom";
 import { api } from "../utils/api";
 import Button from "../components/Button";
 
 export default function ConvertPage() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState("");
 
@@ -80,10 +82,12 @@ export default function ConvertPage() {
     }
 
     try {
-      await api.convertFile("mock", format);
-      alert("Conversión iniciada");
-    } catch {
-      alert("Modo demo");
+      const response = await api.uploadFile(file, format);
+      alert(`Conversión iniciada: ${response.status || "En proceso"}`);
+      navigate("/");
+    } catch (error) {
+      alert(`Error: ${error instanceof Error ? error.message : "No se pudo iniciar conversión"}`);
+      navigate("/");
     }
   };
 
