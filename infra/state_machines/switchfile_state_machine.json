@@ -1,0 +1,51 @@
+{
+  "Comment": "Maquina de estados para registrar una conversion en DB y encolarla en SQS",
+  "StartAt": "RegisterDB",
+  "States": {
+    "RegisterDB": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:$AWS_ACCOUNT:function:switchfile-registerDB",
+      "Next": "ValidarRegistro"
+    },
+    "ValidarRegistro": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.error",
+          "IsPresent": true,
+          "Next": "ErrorRegistro"
+        }
+      ],
+      "Default": "EnqueueSQS"
+    },
+    "EnqueueSQS": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:$AWS_ACCOUNT:function:switchfile-enqueueSQS",
+      "Next": "ValidarEnqueue"
+    },
+    "ValidarEnqueue": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.error",
+          "IsPresent": true,
+          "Next": "ErrorEnqueue"
+        }
+      ],
+      "Default": "ConversionIniciada"
+    },
+    "ConversionIniciada": {
+      "Type": "Succeed"
+    },
+    "ErrorRegistro": {
+      "Type": "Fail",
+      "Error": "RegisterDBError",
+      "Cause": "Error al registrar la conversion en la base de datos"
+    },
+    "ErrorEnqueue": {
+      "Type": "Fail",
+      "Error": "EnqueueSQSError",
+      "Cause": "Error al encolar la conversion en SQS"
+    }
+  }
+}
