@@ -1,67 +1,42 @@
-import { APIGatewayEvent, LambdaResponse } from "../shared/types";
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { AWS_RESOURCES } from '../shared/constants/awsResourceNames';
-import { getDocClient } from '../shared/connections/dynamoDBClient';
-
 /**
- * Nombre de la tabla obtenido desde variables de entorno.
- * Se asume definido en configuración (SAM / Serverless / consola).
+ * GetFiles Handler — GET /files
+ *
+ * Lista el historial de conversiones del usuario, ordenadas por más recientes.
+ * Incluye sourceFileName para mostrar en el dashboard sin lookup extra.
  */
-const TABLE_NAME = AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS;
 
-/**
- * Handler para GET /files
- * 
- * Obtiene todos los archivos del usuario autenticado.
- * - Usa PK = USER#{user_id}
- * - Ordena por SK descendente (archivos más recientes primero)
- */
-export const handler = async (
-  event: APIGatewayEvent
-): Promise<LambdaResponse> => {
-  try {
-    /**
-     * Extrae el userId desde el JWT validado por API Gateway.
-     * No validamos token aquí porque ya lo hizo el authorizer.
-     */
-    const userId = event.requestContext.authorizer.jwt.claims.sub;
+import { APIGatewayEvent, createSuccessResponse, createErrorResponse } from '../shared/types/Apigatewayevent';
+import { extractUserIdFromEvent } from '../shared/utils/helpers';
+import { getConversionsByUserId } from '../shared/queries/conversionQueries';
+import { extractConversionIdFromSK } from '../shared/constants/awsResourceNames';
+import { Conversion } from '../shared/types/Conversion';
 
-    /**
-     * Query a DynamoDB usando la PK del usuario.
-     * ScanIndexForward = false → orden descendente (más recientes primero).
-     */
-    const command = new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: "PK = :pk",
-      ExpressionAttributeValues: {
-        ":pk": `USER#${userId}`,
-      },
-      ScanIndexForward: false,
-    });
+export async function handler(event: APIGatewayEvent) {
+  console.log('[getFiles] Evento recibido:', JSON.stringify(event));
 
-    const { Items } = await getDocClient().send(command);
-
-    /**
-     * Respuesta exitosa.
-     * Se asegura que siempre regrese un array.
-     */
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        files: Items ?? [],
-      }),
-    };
-  } catch (error) {
-    /**
-     * Log estructurado para debugging en CloudWatch.
-     */
-    console.error("getFiles error:", error);
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: "Error obteniendo archivos",
-      }),
-    };
+  const userId = extractUserIdFromEvent(event);
+  if (!userId) {
+    return createErrorResponse(401, 'UNAUTHORIZED', 'Token inválido o no proporcionado');
   }
-};
+
+  const conversions = await getConversionsByUserId(userId);
+
+  return createSuccessResponse(200, {
+    conversions: conversions.map(formatConversion),
+  });
+}
+
+function formatConversion(conv: Conversion) {
+  return {
+    conversionId: extractConversionIdFromSK(conv.SK),
+    sourceFileId: conv.sourceFileId,
+    sourceFileName: conv.sourceFileName,
+    ...(conv.resultFileId && { resultFileId: conv.resultFileId }),
+    sourceFormat: conv.sourceFormat,
+    targetFormat: conv.targetFormat,
+    status: conv.status,
+    createdAt: conv.createdAt,
+    ...(conv.errorMessage && { errorMessage: conv.errorMessage }),
+    ...(conv.completedAt && { completedAt: conv.completedAt }),
+  };
+}
