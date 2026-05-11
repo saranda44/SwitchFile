@@ -1,7 +1,7 @@
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Conversion, VaultFile, VaultFileDetail, DownloadResponse, ReconvertResponse } from "../types";
 
-const API_URL = "https://c4ej2qj76i.execute-api.us-east-1.amazonaws.com";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const session = await fetchAuthSession();
