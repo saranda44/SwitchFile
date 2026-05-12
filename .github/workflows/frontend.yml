@@ -14,7 +14,7 @@ on:
 
 jobs:
   build:
-    name: build
+    name: frontend-build
     runs-on: ubuntu-latest
     defaults:
       run:

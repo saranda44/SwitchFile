@@ -16,7 +16,7 @@ on:
 
 jobs:
   build:
-    name: build
+    name: lambdas-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
