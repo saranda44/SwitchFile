@@ -1,0 +1,100 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  build:
+    name: frontend-build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Amplify Hosting
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          APP_ID="${{ secrets.AMPLIFY_APP_ID }}"
+
+          # Zip the built dist/
+          (cd dist && zip -qr /tmp/frontend-build.zip .)
+          echo "Built artifact: $(du -sh /tmp/frontend-build.zip | cut -f1)"
+
+          # Create a manual deployment to get a presigned upload URL
+          DEPLOY=$(aws amplify create-deployment --app-id "$APP_ID" --branch-name main)
+          JOB_ID=$(echo "$DEPLOY" | jq -r '.jobId')
+          UPLOAD_URL=$(echo "$DEPLOY" | jq -r '.zipUploadUrl')
+          echo "Created deployment job $JOB_ID"
+
+          # Upload the zip to the presigned URL
+          curl -fsS -X PUT \
+            -H "Content-Type: application/zip" \
+            --upload-file /tmp/frontend-build.zip \
+            "$UPLOAD_URL"
+          echo "Uploaded artifact"
+
+          # Trigger the deployment
+          aws amplify start-deployment \
+            --app-id "$APP_ID" \
+            --branch-name main \
+            --job-id "$JOB_ID" \
+            --no-cli-pager > /dev/null
+          echo "Deployment started"
+
+          # Poll until terminal state (max ~5 min)
+          for i in $(seq 1 30); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$APP_ID" \
+              --branch-name main \
+              --job-id "$JOB_ID" \
+              --query "job.summary.status" --output text)
+            echo "Attempt $i: $STATUS"
+            case "$STATUS" in
+              SUCCEED)
+                echo "Frontend deployed to https://main.${APP_ID}.amplifyapp.com"
+                exit 0
+                ;;
+              FAILED|CANCELLED)
+                echo "Deployment failed: $STATUS"
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "Deployment did not finish in time"
+          exit 1
