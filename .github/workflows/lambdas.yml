@@ -1,0 +1,73 @@
+name: Lambdas CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'lambdas/**'
+      - 'infra/scripts/package_lambdas.sh'
+      - '.github/workflows/lambdas.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'lambdas/**'
+      - 'infra/scripts/package_lambdas.sh'
+      - '.github/workflows/lambdas.yml'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dev dependencies
+        working-directory: lambdas
+        run: npm install
+
+      - name: Lint
+        working-directory: lambdas
+        run: npm run lint
+
+      - name: Test
+        working-directory: lambdas
+        run: npm test
+
+      - name: Build
+        working-directory: lambdas
+        run: npm run build
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Package Lambdas
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: bash infra/scripts/package_lambdas.sh --force
+
+      - name: Deploy Lambdas to AWS
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          for zip in packages/*.zip; do
+            func_name="$(basename "$zip" .zip)"
+            full_name="switchfile-${func_name}"
+            echo "Deploying ${full_name}..."
+            aws lambda update-function-code \
+              --function-name "${full_name}" \
+              --zip-file "fileb://${zip}" \
+              --no-cli-pager \
+              --output text \
+              --query 'LastModified'
+          done
+          echo "All Lambdas deployed successfully"
