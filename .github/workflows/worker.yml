@@ -64,7 +64,7 @@ jobs:
               "sudo -u ec2-user git fetch origin",
               "sudo -u ec2-user git reset --hard origin/main",
               "cd worker",
-              "sudo -u ec2-user npm install --omit=dev",
+              "sudo -u ec2-user npm install",
               "sudo -u ec2-user npm run build",
               "sudo systemctl restart switchfile-worker.service",
               "sleep 3",
