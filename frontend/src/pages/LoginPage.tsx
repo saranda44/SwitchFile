@@ -8,8 +8,8 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [, setError] = useState("");
+  const [, setLoading] = useState(false);
   const { login, user } = useAuth();
 
   if (user) return <Navigate to="/" replace />;

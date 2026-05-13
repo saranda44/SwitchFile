@@ -136,3 +136,81 @@ export async function getConversionsByFileId(
     throw new Error('Error al obtener conversiones del archivo');
   }
 }
+
+/**
+ * Actualizar el estado de una conversión
+ * pending → processing → completed/failed
+ */
+export async function updateConversionStatus(
+  userId: string,
+  conversionId: string,
+  statusUpdate: UpdateConversionStatusInput
+): Promise<Conversion> {
+  const conversion = await getConversionById(userId, conversionId);
+  if (!conversion) {
+    throw new Error(`Conversión ${conversionId} no encontrada`);
+  }
+
+  const updateExpressions: string[] = ['#status = :status'];
+  const expressionAttributeValues: Record<string, any> = {
+    ':status': statusUpdate.status,
+  };
+
+  if (statusUpdate.resultFileId) {
+    updateExpressions.push('resultFileId = :resultFileId');
+    expressionAttributeValues[':resultFileId'] = statusUpdate.resultFileId;
+  }
+
+  if (statusUpdate.errorMessage) {
+    updateExpressions.push('errorMessage = :errorMessage');
+    expressionAttributeValues[':errorMessage'] = statusUpdate.errorMessage;
+  }
+
+  if (statusUpdate.completedAt) {
+    updateExpressions.push('completedAt = :completedAt');
+    expressionAttributeValues[':completedAt'] = statusUpdate.completedAt;
+  }
+
+  const command = new UpdateCommand({
+    TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
+    Key: {
+      PK: conversion.PK,
+      SK: conversion.SK,
+    },
+    UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+    ExpressionAttributeNames: {
+      '#status': 'status',
+    },
+    ExpressionAttributeValues: expressionAttributeValues,
+    ReturnValues: 'ALL_NEW',
+  });
+
+  const response = await getDocClient().send(command);
+  return response.Attributes as Conversion;
+}
+
+/**
+ * Obtener conversiones de un lote específico
+ */
+export async function getConversionsByBatchId(
+  userId: string,
+  batchId: string
+): Promise<Conversion[]> {
+  try {
+    const command = new QueryCommand({
+      TableName: AWS_RESOURCES.DYNAMODB_TABLE_CONVERSIONS,
+      KeyConditionExpression: 'PK = :pk',
+      FilterExpression: 'batchId = :batchId',
+      ExpressionAttributeValues: {
+        ':pk': generateConversionPK(userId),
+        ':batchId': batchId,
+      },
+    });
+
+    const response = await getDocClient().send(command);
+    return (response.Items as Conversion[]) || [];
+  } catch (error) {
+    console.error('[getConversionsByBatchId] Error:', error);
+    throw new Error('Error al obtener conversiones del lote');
+  }
+}

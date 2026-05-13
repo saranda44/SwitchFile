@@ -44,6 +44,7 @@ export interface CreateConversionInput {
  */
 export interface UpdateConversionStatusInput {
   status: ConversionStatus;
+  resultFileId?: string;
   errorMessage?: string;
   completedAt?: string;
 }

@@ -257,7 +257,7 @@ export default function VaultPage() {
               <div style={{ marginTop: 20 }}>
                 <p style={{ marginBottom: 10 }}>Selecciona formato destino:</p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 15 }}>
-                  {formatOptions[mapExtToType(selected.sourceFormat)]?.map((fmt) => (
+                  {formatOptions[mapExtToType(selected.originalName.split(".").pop()?.toLowerCase() || "")]?.map((fmt) => (
                     <button
                       key={fmt}
                       onClick={() => setSelectedReconvertFormat(fmt)}
@@ -385,7 +385,7 @@ export default function VaultPage() {
               <div style={{ marginTop: 20 }}>
                 <p style={{ marginBottom: 10 }}>Selecciona formato destino:</p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 15 }}>
-                  {formatOptions[mapExtToType(selectedOriginal.url.split(".").pop()?.toLowerCase() || "")]?.map((fmt) => (
+                  {formatOptions[mapExtToType(selectedOriginal.fileName.split(".").pop()?.toLowerCase() || "")]?.map((fmt) => (
                     <button
                       key={fmt}
                       onClick={() => setSelectedOriginalReconvertFormat(fmt)}

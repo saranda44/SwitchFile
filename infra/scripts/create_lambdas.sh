@@ -18,11 +18,13 @@ HANDLER_SUFFIX="handler.handler"
 TIMEOUT="30"
 MEMORY="256"
 
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
 # Nombres de recursos
 TABLE_FILES="${DYNAMODB_TABLE_FILES:-switchfile-files}"
 TABLE_CONVERSIONS="${DYNAMODB_TABLE_CONVERSIONS:-switchfile-conversions}"
-BUCKET_UPLOADS="${S3_BUCKET_UPLOADS:-switchfile-uploads}"
-BUCKET_CONVERTED="${S3_BUCKET_CONVERTED:-switchfile-converted}"
+BUCKET_UPLOADS="${S3_BUCKET_UPLOADS:-switchfile-uploads-${ACCOUNT_ID}}"
+BUCKET_CONVERTED="${S3_BUCKET_CONVERTED:-switchfile-converted-${ACCOUNT_ID}}"
 SQS_QUEUE_NAME="${SQS_QUEUE_NAME:-switchfile-conversions-queue.fifo}"
 
 echo "═══════════════════════════════════════"
@@ -127,7 +129,7 @@ for FUNC_NAME in $LAMBDA_NAMES; do
             ENV_VARS="Variables={S3_BUCKET_UPLOADS=$BUCKET_UPLOADS,STEP_FUNCTION_ARN=$STEP_FUNCTION_ARN,DYNAMODB_TABLE_FILES=$TABLE_FILES,DYNAMODB_TABLE_CONVERSIONS=$TABLE_CONVERSIONS}"
             ;;
         reconvert)
-            ENV_VARS="Variables={DYNAMODB_TABLE_FILES=$TABLE_FILES,STEP_FUNCTION_ARN=$STEP_FUNCTION_ARN}"
+            ENV_VARS="Variables={DYNAMODB_TABLE_FILES=$TABLE_FILES,DYNAMODB_TABLE_CONVERSIONS=$TABLE_CONVERSIONS,STEP_FUNCTION_ARN=$STEP_FUNCTION_ARN}"
             ;;
         *)
             ENV_VARS=""
